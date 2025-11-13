@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import Icon from '@/components/ui/icon';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import confetti from 'canvas-confetti';
 
 interface Game {
   id: number;
@@ -160,6 +161,29 @@ const Index = () => {
     ));
   };
 
+  const fireConfetti = () => {
+    const count = 200;
+    const defaults = {
+      origin: { y: 0.7 },
+      zIndex: 9999
+    };
+
+    function fire(particleRatio: number, opts: any) {
+      confetti({
+        ...defaults,
+        ...opts,
+        particleCount: Math.floor(count * particleRatio),
+        colors: ['#9b87f5', '#0EA5E9', '#D946EF', '#F97316']
+      });
+    }
+
+    fire(0.25, { spread: 26, startVelocity: 55 });
+    fire(0.2, { spread: 60 });
+    fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 });
+    fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
+    fire(0.1, { spread: 120, startVelocity: 45 });
+  };
+
   const spinRandomizer = () => {
     setIsSpinning(true);
     setWonGame(null);
@@ -179,8 +203,16 @@ const Index = () => {
     setTimeout(() => {
       const randomIndex = Math.floor(Math.random() * weightedGames.length);
       const selectedGame = weightedGames[randomIndex];
+      const basePrice = selectedGame.discount 
+        ? calculateFinalPrice(selectedGame.price, selectedGame.discount) 
+        : selectedGame.price;
+      
       setWonGame(selectedGame);
       setIsSpinning(false);
+
+      if (basePrice >= 1500) {
+        setTimeout(() => fireConfetti(), 300);
+      }
     }, 3000);
   };
 
@@ -478,7 +510,21 @@ const Index = () => {
             ) : wonGame ? (
               <div className="space-y-4 animate-fade-in">
                 <div className="text-center">
-                  <p className="text-sm text-muted-foreground mb-2">Поздравляем! Вы выиграли:</p>
+                  {(() => {
+                    const basePrice = wonGame.discount 
+                      ? calculateFinalPrice(wonGame.price, wonGame.discount) 
+                      : wonGame.price;
+                    return basePrice >= 1500 ? (
+                      <div className="mb-2">
+                        <p className="text-lg font-orbitron text-accent animate-pulse mb-1">
+                          🎉 ЭПИЧЕСКАЯ ПОБЕДА! 🎉
+                        </p>
+                        <p className="text-sm text-muted-foreground">Поздравляем! Вы выиграли:</p>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground mb-2">Поздравляем! Вы выиграли:</p>
+                    );
+                  })()}
                   <h3 className="text-2xl font-orbitron font-bold neon-glow mb-4">{wonGame.title}</h3>
                 </div>
                 <div className="relative rounded-lg overflow-hidden">
