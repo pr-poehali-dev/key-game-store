@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -126,6 +127,9 @@ const reviews: Review[] = [
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState('all');
+  const [isRandomizerOpen, setIsRandomizerOpen] = useState(false);
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [wonGame, setWonGame] = useState<Game | null>(null);
 
   const filterGames = (filter: string) => {
     switch (filter) {
@@ -154,6 +158,30 @@ const Index = () => {
         className={i < Math.floor(rating) ? 'fill-accent text-accent' : 'text-muted-foreground'}
       />
     ));
+  };
+
+  const spinRandomizer = () => {
+    setIsSpinning(true);
+    setWonGame(null);
+
+    const weightedGames = games.flatMap(game => {
+      const basePrice = game.discount ? calculateFinalPrice(game.price, game.discount) : game.price;
+      let weight = 1;
+      
+      if (basePrice < 1000) weight = 50;
+      else if (basePrice < 1500) weight = 30;
+      else if (basePrice < 2000) weight = 15;
+      else weight = 5;
+      
+      return Array(weight).fill(game);
+    });
+
+    setTimeout(() => {
+      const randomIndex = Math.floor(Math.random() * weightedGames.length);
+      const selectedGame = weightedGames[randomIndex];
+      setWonGame(selectedGame);
+      setIsSpinning(false);
+    }, 3000);
   };
 
   return (
@@ -192,6 +220,15 @@ const Index = () => {
               <Button size="lg" className="neon-border text-lg">
                 <Icon name="Gamepad2" size={24} className="mr-2" />
                 Каталог игр
+              </Button>
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className="text-lg border-accent/50 hover:bg-accent/10 hover:border-accent"
+                onClick={() => setIsRandomizerOpen(true)}
+              >
+                <Icon name="Dices" size={24} className="mr-2" />
+                Рандомайзер ключей
               </Button>
               <Button size="lg" variant="outline" className="text-lg border-primary/50 hover:bg-primary/10">
                 <Icon name="Zap" size={24} className="mr-2" />
@@ -416,6 +453,117 @@ const Index = () => {
           </div>
         </div>
       </footer>
+
+      <Dialog open={isRandomizerOpen} onOpenChange={setIsRandomizerOpen}>
+        <DialogContent className="sm:max-w-md cyber-card">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-orbitron neon-glow text-center">
+              Рандомайзер игровых ключей
+            </DialogTitle>
+            <DialogDescription className="text-center text-muted-foreground">
+              Испытайте удачу! Получите случайную игру за 499₽
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-8">
+            {isSpinning ? (
+              <div className="flex flex-col items-center gap-4">
+                <div className="relative w-32 h-32">
+                  <div className="absolute inset-0 border-8 border-primary/20 rounded-full"></div>
+                  <div className="absolute inset-0 border-8 border-transparent border-t-primary rounded-full animate-spin"></div>
+                  <Icon name="Dices" size={48} className="absolute inset-0 m-auto text-primary" />
+                </div>
+                <p className="text-lg font-orbitron animate-pulse">Крутим барабан...</p>
+              </div>
+            ) : wonGame ? (
+              <div className="space-y-4 animate-fade-in">
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground mb-2">Поздравляем! Вы выиграли:</p>
+                  <h3 className="text-2xl font-orbitron font-bold neon-glow mb-4">{wonGame.title}</h3>
+                </div>
+                <div className="relative rounded-lg overflow-hidden">
+                  <img 
+                    src={wonGame.image} 
+                    alt={wonGame.title}
+                    className="w-full h-48 object-cover"
+                  />
+                  <Badge className="absolute top-4 right-4 bg-accent text-accent-foreground text-lg px-3 py-1">
+                    {wonGame.discount ? calculateFinalPrice(wonGame.price, wonGame.discount) : wonGame.price}₽
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <div className="flex">{renderStars(wonGame.rating)}</div>
+                  <span className="text-sm text-muted-foreground">
+                    {wonGame.rating} ({wonGame.reviews.toLocaleString()})
+                  </span>
+                </div>
+                <p className="text-center text-sm text-muted-foreground">
+                  Ключ будет отправлен на ваш email после оплаты
+                </p>
+              </div>
+            ) : (
+              <div className="text-center space-y-4">
+                <div className="w-32 h-32 mx-auto bg-gradient-to-br from-primary/20 to-accent/20 rounded-full flex items-center justify-center neon-border">
+                  <Icon name="Gift" size={64} className="text-primary" />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    💎 Шанс получить игру за 2500₽ — 5%
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    🎮 Шанс получить игру за 1500-2000₽ — 15%
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    🎯 Шанс получить игру за 1000-1500₽ — 30%
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    ⭐ Шанс получить игру до 1000₽ — 50%
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="sm:justify-center">
+            {!wonGame && !isSpinning && (
+              <Button 
+                size="lg" 
+                className="neon-border w-full"
+                onClick={spinRandomizer}
+              >
+                <Icon name="Sparkles" size={20} className="mr-2" />
+                Крутить за 499₽
+              </Button>
+            )}
+            {wonGame && (
+              <div className="flex gap-3 w-full">
+                <Button 
+                  size="lg" 
+                  className="neon-border flex-1"
+                  onClick={() => {
+                    setWonGame(null);
+                    setIsRandomizerOpen(false);
+                  }}
+                >
+                  <Icon name="ShoppingCart" size={20} className="mr-2" />
+                  Купить
+                </Button>
+                <Button 
+                  size="lg" 
+                  variant="outline"
+                  className="flex-1 border-primary/50"
+                  onClick={() => {
+                    setWonGame(null);
+                  }}
+                >
+                  <Icon name="RotateCcw" size={20} className="mr-2" />
+                  Еще раз
+                </Button>
+              </div>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
